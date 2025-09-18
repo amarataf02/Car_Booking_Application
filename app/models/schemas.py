@@ -9,20 +9,21 @@ class Car(BaseModel):
     daily_price: float
     active: bool = True
 
-class Booking(BaseModel):
-    id: int
-    car_id: int
-    date: date
-    customer_name: str
-
-class BookingCreate(BaseModel):
-    car_id: int
-    date: date
-    customer_name: str
-
 class CarCreate(BaseModel):
     make: str
     model: str
     seats: int
     daily_price: float
     active: bool = True
+
+class Booking(BaseModel):
+    id: int
+    car_id: int
+    start_date: date
+    end_date: date
+    days: int
+
+class BookingCreate(BaseModel):
+    car_id: int
+    start_date: date
+    end_date: date

@@ -1,17 +1,30 @@
+import logging
+from datetime import date
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 from typing import List
-import logging
 
 from app.models.schemas import Car, CarCreate
 from app.json_handler.json_store import JSONStore
 from app.json_handler.db_handler import GenericRepo
+from app.service.booking_service import list_available_cars_for_period
 
-router = APIRouter(tags=["Cars"]) 
-logger = logging.getLogger("app.car_endpoints")
+router = APIRouter(tags=["Cars"])
+logger = logging.getLogger("app.cars")
 
 def cars_repo() -> GenericRepo:
     return GenericRepo(JSONStore(Path("data/cars.json")))
+
+def bookings_repo() -> GenericRepo:
+    return GenericRepo(JSONStore(Path("data/bookings.json")))
+
+@router.get("/cars/available", summary="List available cars for a period")
+def cars_available(start: date, end: date):
+    try:
+        cars = list_available_cars_for_period(cars_repo(), bookings_repo(), start, end)
+        return {"start": start, "end": end, "cars": cars}
+    except ValueError as ex:
+        raise HTTPException(status_code=400, detail=str(ex))
 
 @router.get("/cars", response_model=List[Car])
 def list_cars():
