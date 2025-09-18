@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from app.json_handler.json_store import JSONStore
 from app.json_handler.db_handler import GenericRepo
 
-router = APIRouter()
+router = APIRouter(tags=["Admin Pannel"])
 logger = logging.getLogger("app.seed")
 
 DATA_CARS = Path("data/cars.json")

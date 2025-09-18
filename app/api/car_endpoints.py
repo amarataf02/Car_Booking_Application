@@ -7,7 +7,7 @@ from app.models.schemas import Car, CarCreate
 from app.json_handler.json_store import JSONStore
 from app.json_handler.db_handler import GenericRepo
 
-router = APIRouter()
+router = APIRouter(tags=["Cars"]) 
 logger = logging.getLogger("app.car_endpoints")
 
 def cars_repo() -> GenericRepo:

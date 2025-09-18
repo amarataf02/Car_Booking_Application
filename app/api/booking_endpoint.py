@@ -7,7 +7,7 @@ from app.models.schemas import Booking, BookingCreate
 from app.json_handler.json_store import JSONStore
 from app.json_handler.db_handler import GenericRepo
 
-router = APIRouter()
+router = APIRouter(tags=["Bookings"])
 logger = logging.getLogger("app.booking_endpoint")
 
 def cars_repo() -> GenericRepo:

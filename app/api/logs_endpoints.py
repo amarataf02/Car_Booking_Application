@@ -3,7 +3,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from app.core.logger import LOG_FILE
 import asyncio, os
 
-router = APIRouter()
+router = APIRouter(tags=["Admin Pannel"])
 
 @router.get("/logs", response_class=PlainTextResponse)
 def tail_logs(n: int = 200):
