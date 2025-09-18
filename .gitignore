@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Editors/OS ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- App data & logs (keep folders, ignore contents) ---
+data/**
+!data/.gitkeep
+logs/**
+!logs/.gitkeep
+
+# --- Local env & misc ---
+.env
+.env.*
+*.log
