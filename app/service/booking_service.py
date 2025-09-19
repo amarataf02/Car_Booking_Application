@@ -5,12 +5,12 @@ from typing import Dict, Any, List
 logger = logging.getLogger("app.service.booking")
 
 def _validate_and_days(start: date, end: date) -> int:
-    if end <= start:
-        raise ValueError("end_date must be after start_date")
-    return (end - start).days
+    if end < start:
+        raise ValueError("end_date must be the same as or after start_date")
+    return (end - start).days + 1
 
 def _overlaps(a_start: date, a_end: date, b_start: date, b_end: date) -> bool:
-    return a_start < b_end and b_start < a_end
+    return (a_start <= b_end) and (b_start <= a_end)
 
 def _row_to_range(b: Dict[str, Any]) -> tuple[date, date]:
     bs = date.fromisoformat(str(b["start_date"]))
@@ -21,9 +21,9 @@ def ensure_available_and_create_booking(
     cars_repo, bookings_repo, car_id: int, start: date, end: date
 ) -> Dict[str, Any]:
     car = cars_repo.get(car_id)
-    if not car or not car.get("active", True):
-        logger.warning("booking_failed car_missing_or_inactive car_id=%s", car_id)
-        raise ValueError("Car not found or inactive")
+    if not car:
+        logger.warning("booking_failed car_missing car_id=%s", car_id)
+        raise ValueError("Car not found")
 
     days = _validate_and_days(start, end)
 
@@ -65,8 +65,6 @@ def list_available_cars_for_period(
 
     available: List[Dict[str, Any]] = []
     for c in cars_repo.list():
-        if not c.get("active", True):
-            continue
         cid = c["id"]
         ranges = booked.get(cid, [])
         if any(_overlaps(start, end, bs, be) for (bs, be) in ranges):

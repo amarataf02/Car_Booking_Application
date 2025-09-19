@@ -29,9 +29,9 @@ def seed_cars(reset: bool = False):
         return {"inserted": 0, "skipped": True, "existing_count": len(existing)}
 
     seed = [
-        {"make": "Toyota", "model": "Corolla", "seats": 5, "daily_price": 45.0, "active": True},
-        {"make": "Tesla",  "model": "Model 3", "seats": 5, "daily_price": 80.0, "active": True},
-        {"make": "VW",     "model": "Golf",    "seats": 7, "daily_price": 50.0, "active": True},
+        {"make": "Toyota", "model": "Corolla", "seats": 5, "daily_price": 45.0},
+        {"make": "Tesla",  "model": "Model 3", "seats": 5, "daily_price": 80.0},
+        {"make": "VW",     "model": "Tayron",    "seats": 7, "daily_price": 50.0},
     ]
     created = [repo.insert(car) for car in seed]
     logger.info("seed_cars done: reset=%s inserted=%d", reset, len(created))

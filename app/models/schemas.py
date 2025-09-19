@@ -7,14 +7,12 @@ class Car(BaseModel):
     model: str
     seats: int
     daily_price: float
-    active: bool = True
 
 class CarCreate(BaseModel):
     make: str
     model: str
     seats: int
     daily_price: float
-    active: bool = True
 
 class Booking(BaseModel):
     id: int
