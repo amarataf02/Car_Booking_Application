@@ -42,9 +42,15 @@ def ensure_available_and_create_booking(
         "days": days,
     }
     created = bookings_repo.insert(doc)
-    logger.info("booking_success id=%s car_id=%s start=%s end=%s days=%s",
-                created["id"], car_id, start.isoformat(), end.isoformat(), days)
-    return created
+
+    total_price = round(days * float(car.get("daily_price", 0.0)), 2)
+
+    logger.info(
+        "booking_success id=%s car_id=%s start=%s end=%s days=%s total=%s",
+        created["id"], car_id, start.isoformat(), end.isoformat(), days, total_price
+    )
+
+    return {**created, "total_price": total_price}
 
 def list_available_cars_for_period(
     cars_repo, bookings_repo, start: date, end: date

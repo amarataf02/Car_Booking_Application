@@ -32,3 +32,6 @@ class BookingCreateBySeats(BaseModel):
     seats: int
     start_date: date
     end_date: date
+
+class BookingWithPrice(Booking):
+    total_price: float
