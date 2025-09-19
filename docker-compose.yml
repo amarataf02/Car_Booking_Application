@@ -1,7 +1,10 @@
 services:
   api:
     build: .
+    environment:
+      - PYTHONPATH=/app
     ports:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+      - ./tests:/app/tests
