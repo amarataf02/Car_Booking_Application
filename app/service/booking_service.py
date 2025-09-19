@@ -69,3 +69,22 @@ def list_available_cars_for_period(
 
     logger.info("available_cars start=%s end=%s result=%d", start.isoformat(), end.isoformat(), len(available))
     return available
+
+def choose_car_by_seats(cars_repo, bookings_repo, seats: int, start: date, end: date) -> Dict[str, Any]:
+    _validate_and_days(start, end)
+
+    available = list_available_cars_for_period(cars_repo, bookings_repo, start, end)
+
+    candidates = [c for c in available if c.get("seats") == seats]
+
+    if not candidates:
+        raise ValueError("No available car with the requested number of seats for that period")
+
+    candidates.sort(key=lambda c: c["id"])
+    chosen = candidates[0]
+    logger.info("choose_car_by_seats chosen_id=%s seats=%s", chosen["id"], seats)
+    return chosen
+
+def book_by_seats(cars_repo, bookings_repo, seats: int, start: date, end: date) -> Dict[str, Any]:
+    chosen = choose_car_by_seats(cars_repo, bookings_repo, seats, start, end)
+    return ensure_available_and_create_booking(cars_repo, bookings_repo, chosen["id"], start, end)

@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import List
 import logging
 
-from app.models.schemas import Booking, BookingCreate
+from app.models.schemas import Booking, BookingCreate, BookingCreateBySeats
 from app.json_handler.json_store import JSONStore
 from app.json_handler.db_handler import GenericRepo
-from app.service.booking_service import ensure_available_and_create_booking
+from app.service.booking_service import ensure_available_and_create_booking, book_by_seats
 
 router = APIRouter(tags=["Bookings"])
 logger = logging.getLogger("app.booking_endpoint")
@@ -34,6 +34,23 @@ def create_booking(body: BookingCreate):
     try:
         created = ensure_available_and_create_booking(
             cars_repo(), bookings_repo(), body.car_id, body.start_date, body.end_date
+        )
+        return created
+    except ValueError as ex:
+        raise HTTPException(status_code=400, detail=str(ex))
+
+@router.post("/bookings/by-seats", response_model=Booking, status_code=201)
+def create_booking_by_seats(body: BookingCreateBySeats):
+    try:
+        created = book_by_seats(
+            cars_repo(), bookings_repo(),
+            seats=body.seats,
+            start=body.start_date,
+            end=body.end_date
+        )
+        logger.info(
+            "booking_by_seats_success id=%s seats=%s start=%s end=%s",
+            created["id"], body.seats, body.start_date.isoformat(), body.end_date.isoformat()
         )
         return created
     except ValueError as ex:

@@ -27,3 +27,8 @@ class BookingCreate(BaseModel):
     car_id: int
     start_date: date
     end_date: date
+
+class BookingCreateBySeats(BaseModel):
+    seats: int
+    start_date: date
+    end_date: date
