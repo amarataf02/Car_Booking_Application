@@ -1,4 +1,4 @@
-# Car Rental API (JSON-backed)
+# Car Rental API
 
 A tiny FastAPI project that simulates a car-rental backend using JSON files as storage.  
 It focuses on two core flows:
@@ -17,8 +17,8 @@ This makes it easy to replace JSON with a real database later.
 ### Storage
 (Per the exercise spec): plain JSON files instead of a DB
 
-- data/cars.json → “cars table”  
-- data/bookings.json → “bookings table”  
+- `data/cars.json` → “cars table”  
+- `data/bookings.json` → “bookings table”  
 
 ### JSON as a mini database
 To keep the app scalable and DB-agnostic, all reads/writes go through a tiny repository layer:
@@ -30,22 +30,43 @@ To keep the app scalable and DB-agnostic, all reads/writes go through a tiny rep
   - `delete(id)` → remove row if present
 
 **Why this scales later:**  
-the API and services only know about list/get/insert/delete, not how data is stored. Swapping GenericRepo(JSONStore(...)) for a real repository (e.g., SQLAlchemy/ORM) is a localized change with minimal impact on routes/services.
+the API and services only know about list/get/insert/delete, not how data is stored. Swapping `GenericRepo(JSONStore(...))` for a real repository (e.g., SQLAlchemy/ORM) is a localized change with minimal impact on routes/services.
+
+### Integration of new tables
+
+Each `GenericRepo` instance is tied to a single `JSONStore`, which in turn maps to one `JSON file`. You can think of this like opening a database connection to a specific table.
+- For example, `GenericRepo(JSONStore("data/cars.json"))` is the repository for the cars table.
+- Similarly, `GenericRepo(JSONStore("data/bookings.json"))` handles the bookings table.
+All operations `(list, get, insert, delete)` on that repo are automatically routed to the correct file via the `JSONStore`, which ensures atomic reads and writes with file locking.
+
+This design makes adding a new table straightforward:
+
+- Create a new JSON file (e.g., data/customers.json).
+- Initialize a new repo:
+  `customers_repo = GenericRepo(JSONStore("data/customers.json"))`
+- Use it in exactly the same way as other repos:
+  `customers_repo.insert({"name": "Alice"})`
+
+Because each repo is isolated to its file, this pattern is scalable:
+- Adding a new "table" = creating a new JSON file + new GenericRepo binding.
+- From the service or API perspective, this behaves just like a real DB session:
+  - Instead of `db.add(customer)` → you call `customers_repo.insert(customer)`
+  - Instead of `db.query(Customer)` → you call `customers_repo.list()`
+
+This keeps the code clean, consistent, and swappable with a real ORM (like SQLAlchemy) in the future.
 
 ### Booking options & pricing
 
 - **Create booking by car ID:** book a specific car for a date range.
 - **Create booking by seats:** pick the first available car with the requested seat count for a date range.
-- **Price:** responses include total_price = days * daily_price (rounded to 2 decimals).
+- **Price:** responses include `total_price = days * daily_price` (rounded to 2 decimals).
 The computed days is also stored with the booking for clarity.
 
 ### Dates & ranges
 
-- Inclusive ranges: [start_date, end_date]  
+- Inclusive ranges: `[start_date, end_date]`
 - days = (end_date - start_date).days + 1 (so start == end is 1 day)  
-- Overlap check (inclusive): two bookings overlap if  
-
-a_start <= b_end AND b_start <= a_end
+- Overlap check (inclusive): two bookings overlap if `a_start <= b_end AND b_start <= a_end`
 
 ### Guarantees
 - start == end → 1 day  
@@ -109,32 +130,36 @@ Explore & try everything at:
   - availability behavior  
   - persistence by reading data/bookings.json  
 
-Run tests (inside the container):  
+Run tests (execute in different terminal if not running docker container in the background):
+```bash
 docker compose exec api pytest -vv
+```
 
 ---
 
 ## Setup & Run
 
+### Clone the repository
+
+```bash
+git clone https://github.com/amarataf02/Car_Booking_Application.git
+cd Car_Booking_Application
+```
+
 ### Docker Compose (recommended)
 
+```bash
 docker compose up --build
+```
 
 Open the docs:  
 http://localhost:8000/docs
 
-Seed demo cars (optional):  
-curl -X POST "http://localhost:8000/api/seed/cars?reset=true"
+Seed demo cars from:  
+`/api/seed/cars?reset=true`
 
-Tail logs (last 200 lines):  
-curl "http://localhost:8000/api/logs?n=200"
-
-### Local (without Docker)
-
-python -m venv .venv  
-source .venv/bin/activate  
-pip install -r requirements.txt  
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+Tail logs (last 200 lines) from:  
+`/api/logs?n=200`
 
 ---
 
@@ -144,7 +169,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - Logs to stdout and a file under logs/ (e.g., logs/app.log)  
 
 Dev helper endpoint:  
-GET /api/logs?n=200 → returns the last N lines (plain text)
+`GET /api/logs?n=200 → returns the last N lines (plain text)`
 
 ---
 
