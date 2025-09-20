@@ -10,6 +10,10 @@ The app is intentionally simple but structured like a real service:
 `routing → service layer → repository → storage`.  
 This makes it easy to replace JSON with a real database later.
 
+## Suggestion system
+
+The app suggests cars with similar features when a car is already booked for the desired dates.
+
 ---
 
 ## Design Choices
@@ -90,6 +94,7 @@ The computed days is also stored with the booking for clarity.
 - GET /bookings/by-car/{car_id}  
 - POST /bookings  
 - POST /bookings/by-seats
+- DELETE /booking/{booking_id}
 
 ### Utilities
 - GET /logs?n=200  
