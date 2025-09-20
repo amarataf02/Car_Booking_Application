@@ -20,7 +20,7 @@ app = FastAPI(
     openapi_tags=tags_metadata,
 )
 
-app = FastAPI(title="Car Rental API (JSON-backed)")
+app = FastAPI(title="Car Rental API")
 app.include_router(cars_router, prefix="/api")
 app.include_router(bookings_router, prefix="/api")
 app.include_router(logs_router, prefix="/api")

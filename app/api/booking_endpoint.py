@@ -37,7 +37,8 @@ def create_booking(body: BookingCreate):
         )
         return created
     except ValueError as ex:
-        raise HTTPException(status_code=400, detail=str(ex))
+        detail = ex.args[0] if isinstance(ex.args[0], dict) else {"message": str(ex)}
+        raise HTTPException(status_code=400, detail=detail)
 
 @router.post("/bookings/by-seats", response_model=BookingWithPrice, status_code=201)
 def create_booking_by_seats(body: BookingCreateBySeats):
@@ -55,3 +56,18 @@ def create_booking_by_seats(body: BookingCreateBySeats):
         return created
     except ValueError as ex:
         raise HTTPException(status_code=400, detail=str(ex))
+
+@router.delete("/bookings/{booking_id}", status_code=204, summary="Cancel a booking")
+def delete_booking(booking_id: int):
+    repo = bookings_repo()
+    booking = repo.get(booking_id)
+    if not booking:
+        logger.warning("delete_booking_failed id=%s not_found", booking_id)
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    repo.delete(booking_id)
+    logger.info(
+        "delete_booking_success id=%s car_id=%s start=%s end=%s",
+        booking_id, booking["car_id"], booking["start_date"], booking["end_date"]
+    )
+    return {"detail": f"Booking {booking_id} cancelled successfully"}

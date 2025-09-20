@@ -17,6 +17,18 @@ def _row_to_range(b: Dict[str, Any]) -> tuple[date, date]:
     be = date.fromisoformat(str(b["end_date"]))
     return bs, be
 
+def _alternative_cars_same_seats(cars_repo, bookings_repo, seats: int, start: date, end: date, exclude_car_id, limit: int = 3) -> List[Dict[str, Any]]:
+    available = list_available_cars_for_period(cars_repo, bookings_repo, start, end)
+    candidates = [
+        c for c in available
+        if int(c.get("seats", 0)) == int(seats) and (exclude_car_id is None or c["id"] != exclude_car_id)
+    ]
+    candidates.sort(key=lambda c: (float(c.get("daily_price", 0.0)), c["id"]))
+    return [
+        {"id": c["id"], "make": c.get("make"), "model": c.get("model"), "daily_price": c.get("daily_price")}
+        for c in candidates[:limit]
+    ]
+
 def ensure_available_and_create_booking(
     cars_repo, bookings_repo, car_id: int, start: date, end: date
 ) -> Dict[str, Any]:
@@ -32,8 +44,18 @@ def ensure_available_and_create_booking(
             continue
         bs, be = _row_to_range(b)
         if _overlaps(start, end, bs, be):
-            logger.info("booking_failed conflict car_id=%s start=%s end=%s", car_id, start.isoformat(), end.isoformat())
-            raise ValueError("Car already booked for that period")
+            seats = int(car.get("seats", 0))
+            alternatives = _alternative_cars_same_seats(
+                cars_repo, bookings_repo, seats, start, end, exclude_car_id=car_id, limit=3
+            )
+            logger.info(
+                "booking_conflict car_id=%s start=%s end=%s alternatives=%d",
+                car_id, start.isoformat(), end.isoformat(), len(alternatives)
+            )
+            raise ValueError({
+                "message": "Car already booked for that period",
+                "alternatives": alternatives
+            })
 
     doc = {
         "car_id": car_id,

@@ -1,3 +1,11 @@
+def detail_text(resp):
+    d = resp.json().get("detail")
+    if isinstance(d, str):
+        return d
+    if isinstance(d, dict):
+        return d.get("message", "")
+    return ""
+
 def test_create_booking_by_id_success(client):
     payload = {"car_id": 1, "start_date": "2025-09-20", "end_date": "2025-09-22"}
     r = client.post("/api/bookings", json=payload)
@@ -25,7 +33,7 @@ def test_create_booking_by_id_invalid_range(client):
         "end_date": "2025-10-01"
     })
     assert r.status_code == 400
-    assert "after" in r.json()["detail"].lower()
+    assert "after" in detail_text(r).lower()
 
 def test_create_booking_by_id_conflict_at_edge_inclusive(client):
     r1 = client.post("/api/bookings", json={
@@ -37,7 +45,7 @@ def test_create_booking_by_id_conflict_at_edge_inclusive(client):
         "car_id": 1, "start_date": "2025-09-22", "end_date": "2025-09-24"
     })
     assert r2.status_code == 400
-    assert "already booked" in r2.json()["detail"].lower()
+    assert "already booked" in detail_text(r2).lower()
 
 def test_create_booking_by_seats_picks_next_available(client):
     r1 = client.post("/api/bookings", json={
@@ -65,4 +73,4 @@ def test_create_booking_by_seats_when_none_available(client):
         "seats": 5, "start_date": "2025-12-01", "end_date": "2025-12-03"
     })
     assert r2.status_code == 400
-    assert "no available car" in r2.json()["detail"].lower()
+    assert "no available car" in detail_text(r2).lower()
