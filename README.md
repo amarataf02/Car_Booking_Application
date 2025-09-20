@@ -153,8 +153,8 @@ docker compose up --build
 
 **Open the docs:**
 
-Swagger UI -> http://localhost:8000/docs
-ReDoc -> http://localhost:8000/redoc
+- Swagger UI -> http://localhost:8000/docs
+- ReDoc -> http://localhost:8000/redoc
 
 Seed demo cars from:  
 `/api/seed/cars?reset=true`
