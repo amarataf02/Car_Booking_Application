@@ -1,202 +1,158 @@
-Car Rental API (JSON-backed)
+# Car Rental API (JSON-backed)
 
-A tiny FastAPI project that simulates a car-rental backend using JSON files as storage. It focuses on the two core flows:
+A tiny FastAPI project that simulates a car-rental backend using JSON files as storage.  
+It focuses on two core flows:
 
-Check availability of cars for a date range
+- **Check availability of cars** for a date range  
+- **Create a booking** for a date range (by car id or by number of seats)
 
-Create a booking for a date range (by car id or by number of seats)
+The app is intentionally simple but structured like a real service:  
+`routing → service layer → repository → storage`.  
+This makes it easy to replace JSON with a real database later.
 
-It’s intentionally simple but structured like a real app: routing → service layer → repository → storage. That makes it easy to swap JSON for a real database later.
+---
 
-Architecture & Design Choices
+## Design Choices
 
-Storage (per spec): uses JSON files instead of a database:
+### Storage
+(Per the exercise spec): plain JSON files instead of a DB
 
-data/cars.json (“cars table”)
+- data/cars.json → “cars table”  
+- data/bookings.json → “bookings table”  
 
-data/bookings.json (“bookings table”)
+### JSON as a mini database
+To keep the app scalable and DB-agnostic, all reads/writes go through a tiny repository layer:
+- JSONStore: low-level file I/O + file locking; reads the JSON, applies a change, and rewrites atomically (write to temp file, then replace). This prevents partial writes and concurrent corruption.
+- GenericRepo: simple CRUD-like API on top of the store:
+  - `list()` → return all rows (list of dicts)
+  - `get(id)` → return one row or None
+  - `insert(doc)` → assign next ID (_meta.seq + 1), persist, return created row
+  - `delete(id)` → remove row if present
 
-Repository pattern: to mimic DB/ORM access, there’s a small abstraction over JSON files:
+**Why this scales later:**  
+the API and services only know about list/get/insert/delete, not how data is stored. Swapping GenericRepo(JSONStore(...)) for a real repository (e.g., SQLAlchemy/ORM) is a localized change with minimal impact on routes/services.
 
-repo.list(), repo.get(id), repo.insert(doc), repo.delete(id)
+### Booking options & pricing
 
-This keeps API/service code database-agnostic and swappable with a real DB later.
+- **Create booking by car ID:** book a specific car for a date range.
+- **Create booking by seats:** pick the first available car with the requested seat count for a date range.
+- **Price:** responses include total_price = days * daily_price (rounded to 2 decimals).
+The computed days is also stored with the booking for clarity.
 
-JSONStore (file wrapper):
+### Dates & ranges
 
-Applies file locking during writes and performs atomic rewrites to avoid corruption.
+- Inclusive ranges: [start_date, end_date]  
+- days = (end_date - start_date).days + 1 (so start == end is 1 day)  
+- Overlap check (inclusive): two bookings overlap if  
 
-Simulates a “single-writer” model so two writers don’t edit at the same time.
-
-Why this is scalable later: the API and service layers already talk to a “DB-like” interface (the repo). Replacing GenericRepo(JSONStore(...)) with a real database repo is a drop-in change.
-
-Dates & range logic:
-
-Inclusive ranges: [start_date, end_date]
-
-days = (end_date - start_date).days + 1 (so start == end means 1 day)
-
-Overlap rule (inclusive): two bookings overlap if
 a_start <= b_end AND b_start <= a_end
 
-Pricing: booking responses include total_price = days * daily_price.
+### Guarantees
+- start == end → 1 day  
+- A booking starting on another booking’s end day conflicts (not allowed)
 
-Endpoints
+---
 
-Base path: /api
+## Architecture
 
-Focus endpoints
+### Endpoints (brief)
 
-GET /cars/available — list available cars for a date range
+**Base path:** /api
 
-POST /bookings — create a booking by car id
+### Cars
+- GET /cars  
+- GET /cars/{car_id}  
+- POST /cars  
+- GET /cars/available?start=YYYY-MM-DD&end=YYYY-MM-DD
 
-POST /bookings/by-seats — create a booking by seat count (first available)
+### Bookings
+- GET /bookings  
+- GET /bookings/by-car/{car_id}  
+- POST /bookings  
+- POST /bookings/by-seats
 
-Method	Path	What it does	Body (JSON) example
-GET	/cars	List all cars.	—
-GET	/cars/{car_id}	Get a single car by id.	—
-POST	/cars	Create a new car.	{"make":"Toyota","model":"Corolla","seats":5,"daily_price":50.0}
-GET	/cars/available?start=YYYY-MM-DD&end=YYYY-MM-DD	Availability: cars not overlapping any booking within the inclusive [start,end] range.	—
-GET	/bookings	List all bookings.	—
-GET	/bookings/by-car/{car_id}	List bookings for a car.	—
-POST	/bookings	Create booking by car id. Returns days and total_price.	{"car_id":1,"start_date":"2025-09-20","end_date":"2025-09-22"}
-POST	/bookings/by-seats	Create booking by seats (first available car with that seat count). Returns days and total_price.	{"seats":5,"start_date":"2025-09-20","end_date":"2025-09-22"}
-GET	/logs?n=200	Tail the last N log lines (plain text).	—
-POST	`/seed/cars?reset=true	false`	Seed some demo cars. reset=true rewrites cars.json.
+### Utilities
+- GET /logs?n=200  
+- POST /seed/cars?reset=true|false
 
-Responses (booking creation):
+Explore & try everything at:
 
-{
-  "id": 7,
-  "car_id": 2,
-  "start_date": "2025-09-20",
-  "end_date": "2025-09-22",
-  "days": 3,
-  "total_price": 210.0
-}
+- /docs (Swagger UI)  
+- /redoc
 
-Folders (what’s inside)
+---
 
-app/api/ — FastAPI routers (cars, bookings, logs, seed)
+## Folders (what’s inside)
 
-app/core/ — logging setup (stdout + file)
+- `app/api/` — FastAPI routers (cars, bookings, logs, seed)  
+- `app/core/` — logging setup (stdout + file)  
+- `app/json_handler/` — JSONStore (file IO + locking) & Database handler (CRUD-ish)  
+- `app/models/` — Pydantic schemas (Car, Booking, etc.)  
+- `app/service/` — business rules (availability, conflicts, pricing)  
+- `app/main.py` — app wiring & OpenAPI tags  
+- `data/` — JSON files (created at runtime)  
+- `tests/` — pytest integration tests  
 
-app/json_handler/ — JSONStore (file IO + locking) and GenericRepo (list/get/insert/delete)
+---
 
-app/models/ — Pydantic schemas (Car, Booking, etc.)
+## Testing (Quality Assurance)
 
-app/service/ — business rules (availability, conflict checks, pricing)
+- Frameworks: pytest + FastAPI TestClient  
+- **Unit testing for booking endpoints**
+- **Integration testing of full circle logic:**
+  - `car creation →  car checking → availability checking → booking of car -> check booking -> check persistance`
+- Tests run against a temporary data/ per test (no real files touched)  
+- They call real endpoints and validate:
+  - booking creation (by id & by seats)  
+  - inclusive edge conflicts  
+  - total price math  
+  - availability behavior  
+  - persistence by reading data/bookings.json  
 
-app/main.py — app factory & OpenAPI tag metadata
-
-data/ — JSON files (created at runtime)
-
-logs/ — log file (created at runtime)
-
-tests/ — pytest integration tests
-
-Testing (Quality Assurance)
-
-pytest + FastAPI TestClient
-
-Tests use a temporary data/ per test run (no real files touched).
-
-They call real endpoints (HTTP) and validate:
-
-booking creation by id & by seats
-
-inclusive edge conflicts
-
-total price calculations
-
-availability results
-
-persistence by reading data/bookings.json
-
-Run tests (Docker Compose):
-
+Run tests (inside the container):  
 docker compose exec api pytest -vv
 
+---
 
-You can also test everything interactively at /docs (Swagger UI).
+## Setup & Run
 
-Setup & Run
-Docker Compose (recommended)
-
-Build & start:
+### Docker Compose (recommended)
 
 docker compose up --build
 
-
-Open docs:
-
+Open the docs:  
 http://localhost:8000/docs
 
-
-(Optional) Seed demo cars:
-
+Seed demo cars (optional):  
 curl -X POST "http://localhost:8000/api/seed/cars?reset=true"
 
-
-Tail logs (last 200 lines):
-
+Tail logs (last 200 lines):  
 curl "http://localhost:8000/api/logs?n=200"
 
-Local (without Docker)
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+### Local (without Docker)
+
+python -m venv .venv  
+source .venv/bin/activate  
+pip install -r requirements.txt  
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-Logging
+---
 
-Initialized once at startup; logs go to stdout and a file (e.g., logs/app.log).
+## Logging
 
-Developer helper endpoint:
+- Initialized on startup  
+- Logs to stdout and a file under logs/ (e.g., logs/app.log)  
 
-GET /api/logs?n=200 → returns the last N lines (plain text), useful during development.
+Dev helper endpoint:  
+GET /api/logs?n=200 → returns the last N lines (plain text)
 
-How Date Ranges Are Computed (Simple & Predictable)
+---
 
-Bookings use inclusive ranges: [start_date, end_date]
+## Potential Improvements
 
-Days are computed as:
-
-days = (end_date - start_date).days + 1
-
-
-Overlaps are checked with:
-
-overlaps = (a_start <= b_end) and (b_start <= a_end)
-
-
-This guarantees:
-
-start == end → 1-day booking
-
-A booking starting on another booking’s end day conflicts (not allowed)
-
-Potential Improvements
-
-Replace JSON with a real database (e.g., Postgres/SQLite) + migrations
-
-Auth & rate limiting
-
-Time zones and pickup/return times (currently date-only)
-
-Pagination & filters for listings
-
-Better error messages & suggestions (alternative cars/dates)
-
-Availability caching for large datasets
-
-Idempotency keys for booking creation (safe retries)
-
-Multi-process distributed locks (or just use a DB for concurrency)
-
-License
-
-MIT (or your preferred license)
-
-Tip: Everything is browsable and testable at /docs. The structure is deliberately close to a “real” service so swapping the JSON repo for a proper database later is straightforward.
+- Replace JSON with a real database (Postgres/SQLite) and migrations with Alembic
+- Authentication & rate limiting  
+- Time zones and pickup/return times (currently date-only)  
+- Pagination & filters for listings  
+- Better conflict feedback (suggest alternative cars/dates)  
+- Availability caching for large datasets  
