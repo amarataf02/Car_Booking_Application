@@ -14,7 +14,7 @@ tags_metadata = [
 init_logging()
 
 app = FastAPI(
-    title="Car Rental API (JSON-backed)",
+    title="Car Rental API",
     version="0.1.0",
     description="Simple demo API using JSON files for storage.",
     openapi_tags=tags_metadata,

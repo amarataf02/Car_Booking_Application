@@ -39,15 +39,14 @@ Each `GenericRepo` instance is tied to a single `JSONStore`, which in turn maps 
 - Similarly, `GenericRepo(JSONStore("data/bookings.json"))` handles the bookings table.
 All operations `(list, get, insert, delete)` on that repo are automatically routed to the correct file via the `JSONStore`, which ensures atomic reads and writes with file locking.
 
-This design makes adding a new table straightforward:
-
+**This design makes adding a new table straightforward:**
 - Create a new JSON file (e.g., data/customers.json).
 - Initialize a new repo:
   `customers_repo = GenericRepo(JSONStore("data/customers.json"))`
 - Use it in exactly the same way as other repos:
   `customers_repo.insert({"name": "Alice"})`
 
-Because each repo is isolated to its file, this pattern is scalable:
+**Because each repo is isolated to its file, this pattern is scalable:**
 - Adding a new "table" = creating a new JSON file + new GenericRepo binding.
 - From the service or API perspective, this behaves just like a real DB session:
   - Instead of `db.add(customer)` → you call `customers_repo.insert(customer)`
@@ -152,8 +151,10 @@ cd Car_Booking_Application
 docker compose up --build
 ```
 
-Open the docs:  
-http://localhost:8000/docs
+**Open the docs:**
+
+Swagger UI -> http://localhost:8000/docs
+ReDoc -> http://localhost:8000/redoc
 
 Seed demo cars from:  
 `/api/seed/cars?reset=true`
